@@ -1,0 +1,86 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connection testing endpoint
+    match /test/connection {
+      allow get: if true;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User profile document
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidId(userId) &&
+        incoming().uid == userId &&
+        incoming().email is string && incoming().email.size() <= 200;
+      allow update: if isOwner(userId) &&
+        incoming().uid == existing().uid &&
+        incoming().email == existing().email;
+      allow delete: if isOwner(userId);
+
+      // Transactions subcollection
+      match /transactions/{transactionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(transactionId) &&
+          incoming().userId == userId &&
+          incoming().type in ['income', 'expense'] &&
+          incoming().amount is number && incoming().amount >= 0 &&
+          incoming().category is string && incoming().category.size() <= 100 &&
+          incoming().date is string && incoming().date.size() <= 30;
+        allow update: if isOwner(userId) &&
+          incoming().userId == existing().userId &&
+          incoming().type in ['income', 'expense'] &&
+          incoming().amount is number && incoming().amount >= 0 &&
+          incoming().category is string && incoming().category.size() <= 100;
+        allow delete: if isOwner(userId);
+      }
+
+      // Categories subcollection
+      match /categories/{categoryId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(categoryId) &&
+          incoming().userId == userId &&
+          incoming().name is string && incoming().name.size() <= 100;
+        allow update: if isOwner(userId) &&
+          incoming().userId == existing().userId &&
+          incoming().name is string && incoming().name.size() <= 100;
+        allow delete: if isOwner(userId);
+      }
+
+      // Monthly budget and savings goal subcollection
+      match /monthlyBudgets/{monthKey} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(monthKey) &&
+          incoming().userId == userId;
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

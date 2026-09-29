@@ -1,0 +1,6 @@
+{
+  "name": "My-new-Finance-tracker",
+  "description": "ระบบจัดการรายรับรายจ่ายอัจฉริยะ สรุปผลรายเดือน วิเคราะห์กราฟการเงิน และส่งออกรูปภาพสรุป พร้อมระบบคลาวด์ Firebase และเข้าสู่ระบบด้วย Gmail",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
